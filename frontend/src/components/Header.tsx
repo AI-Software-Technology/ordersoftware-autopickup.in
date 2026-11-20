@@ -163,7 +163,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenNewOrder, onTo
                <img src='https://i.ibb.co/YFZDpyCf/download-2.png' className='w-full' />
               </div>
               <span className="font-bold text-slate-900 text-sm tracking-tight hidden xs:inline">
-                Maxmol<span className="text-amber-500">Lubricant</span>
+                Auto pickup<span className="text-amber-500">Lubricant</span>
               </span>
             </div>
 

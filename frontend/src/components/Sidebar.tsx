@@ -65,7 +65,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, isOpe
           </div>
           <div>
             <span className="font-bold text-white text-sm tracking-wide flex items-center gap-1">
-              Maxmol<span className="text-amber-400">Lubricant</span>
+              Auto pickup<span className="text-amber-400">Lubricant</span>
               <span className="text-[8px] font-semibold uppercase px-1.5 py-0.2 bg-amber-400/20 text-amber-300 rounded ml-1 border border-amber-400/30">ERP</span>
             </span>
             <p className="text-[10px] text-slate-400 font-medium">Lubricant Ops & Logistics</p>

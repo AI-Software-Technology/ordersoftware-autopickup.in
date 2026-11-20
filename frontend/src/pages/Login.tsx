@@ -25,7 +25,7 @@ const Brand: React.FC<{ tone: 'light' | 'dark' }> = ({ tone }) => (
         <img src='https://i.ibb.co/YFZDpyCf/download-2.png' className='w-full' />
     </span>
     <span className={`font-display text-xl font-semibold tracking-tight ${tone === 'dark' ? 'text-white' : 'text-oil-900'}`}>
-      Maxmol <span className="text-amber-500">Lubricant</span> ERP
+      Auto pickup<span className="text-amber-500">Lubricant</span> ERP
     </span>
   </div>
 );
