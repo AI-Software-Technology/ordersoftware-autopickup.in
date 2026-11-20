@@ -160,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({ onNavigate, onOpenNewOrder, onTo
               className="flex items-center gap-1.5 cursor-pointer lg:hidden shrink-0"
             >
               <div className="w-9 h-9 rounded-md  text-slate-950 flex items-center justify-center font-black shadow-xs">
-               <img src='https://i.ibb.co/YFZDpyCf/download-2.png' className='w-full' />
+               <img src='https://i.ibb.co/4ZJKzTGW/logo.jpg' className='w-full' />
               </div>
               <span className="font-bold text-slate-900 text-sm tracking-tight hidden xs:inline">
                 Auto pickup<span className="text-amber-500">Lubricant</span>

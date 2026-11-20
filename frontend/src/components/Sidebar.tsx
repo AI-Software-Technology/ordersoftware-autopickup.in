@@ -61,7 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentPage, onNavigate, isOpe
       <div className="h-16 flex items-center justify-between px-5 border-b border-slate-800 bg-slate-950 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-lg  text-slate-950 flex items-center justify-center font-black shadow-md">
-            <img src='https://i.ibb.co/YFZDpyCf/download-2.png' className='w-full' />
+            <img src='https://i.ibb.co/4ZJKzTGW/logo.jpg' className='w-full' />
           </div>
           <div>
             <span className="font-bold text-white text-sm tracking-wide flex items-center gap-1">
