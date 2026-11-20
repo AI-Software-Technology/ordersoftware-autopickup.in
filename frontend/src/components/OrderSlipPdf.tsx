@@ -369,7 +369,7 @@ export const OrderSlipPdf: React.FC<{ order: Order; items: OrderItem[]; assets: 
                 <Text style={{ fontSize: 7.5, color: C.muted, marginBottom: 3 }}>For {order.billing_company_name}</Text>
               </View>
               <Text style={s.sigTitle}>Authorized Signatory / Dispatch Head</Text>
-              <Text style={s.sigSub}>Maxmol Lubricant Operations Management System</Text>
+              <Text style={s.sigSub}>Auto pickup Operations Management System</Text>
             </View>
           </View>
         </View>

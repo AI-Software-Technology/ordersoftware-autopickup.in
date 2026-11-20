@@ -45,7 +45,7 @@ app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(uploadUrls);
 if (process.env.NODE_ENV !== 'test') app.use(morgan('dev'));
 
-app.get('/', (_req, res) => res.json({ name: 'Maxmol Lubricant Lubricant ERP API', status: 'ok' }));
+app.get('/', (_req, res) => res.json({ name: 'Auto pickup Lubricant ERP API', status: 'ok' }));
 app.get('/health', (_req, res) => res.json({ status: 'ok', time: new Date().toISOString() }));
 
 app.use('/api', apiRouter);

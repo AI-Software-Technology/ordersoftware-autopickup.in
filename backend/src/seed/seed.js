@@ -372,7 +372,7 @@ async function seedDatabase(force = false) {
 
   await Setting.setValue('tax_gst_percentage', '18');
   await Setting.setValue('default_credit_days', '30');
-  await Setting.setValue('app_name', 'Maxmol Lubricant Lubricant ERP');
+  await Setting.setValue('app_name', 'Auto pickup Lubricant ERP');
 
   await syncAllCounters();
   // Complete the permission matrix ( Packing Team role, bills / payments permissions ... )

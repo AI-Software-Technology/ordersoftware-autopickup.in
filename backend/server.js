@@ -10,7 +10,7 @@ async function start() {
   await bootstrapDatabase();
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Maxmol Lubricant ERP API running on http://localhost:${PORT}`);
+    console.log(`Auto pickup API running on http://localhost:${PORT}`);
   });
 }
 

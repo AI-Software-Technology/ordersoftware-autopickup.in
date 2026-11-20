@@ -45,7 +45,7 @@ function Splash() {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-400">
       <div className="flex flex-col items-center gap-3" role="status" aria-live="polite">
         <div className="w-10 h-10 border-3 border-amber-500 border-t-transparent rounded-full motion-safe:animate-spin"></div>
-        <p className="text-xs font-semibold text-slate-300">Initializing Maxmol Lubricant Lubricant ERP...</p>
+        <p className="text-xs font-semibold text-slate-300">Initializing Auto pickup Lubricant ERP...</p>
       </div>
     </div>
   );
@@ -174,7 +174,7 @@ function NotFound() {
   return (
     <div className="p-6 sm:p-12 max-w-lg mx-auto my-12 bg-white rounded-2xl border border-slate-200 shadow-md text-center space-y-3">
       <h2 className="text-lg font-bold text-slate-900">Page not found</h2>
-      <p className="text-xs text-slate-600">This address does not match any screen in Maxmol Lubricant.</p>
+      <p className="text-xs text-slate-600">This address does not match any screen in Auto pickup.</p>
       <button
         onClick={() => navigate('dashboard')}
         className="inline-flex px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition"

@@ -113,7 +113,7 @@ export const Login: React.FC = () => {
           </div>
 
           <h2 className="font-display text-3xl font-semibold tracking-tight text-oil-900">Sign in</h2>
-          <p className="mt-2 text-[15px] text-slate-600">Use your Maxmol Lubricant account to continue.</p>
+          <p className="mt-2 text-[15px] text-slate-600">Use your Auto pickup account to continue.</p>
 
           {connectionError && (
             <div role="alert" className="mt-6 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 p-3.5 text-sm text-amber-900">

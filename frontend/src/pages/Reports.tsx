@@ -266,7 +266,7 @@ export const Reports: React.FC = () => {
               ].filter(Boolean).join('  |  ') || 'Filters: none (all records)'}
             </p>
             <p className="text-xs text-slate-500">
-              Generated on {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} • Maxmol Lubricant Enterprise Lubricant ERP
+              Generated on {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} • Auto pickup Enterprise Lubricant ERP
             </p>
           </div>
           <span className="font-mono text-xs font-bold bg-slate-100 px-3 py-1 rounded">

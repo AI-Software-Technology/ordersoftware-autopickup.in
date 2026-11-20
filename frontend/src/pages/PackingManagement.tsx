@@ -134,7 +134,7 @@ td {
 </style></head>
 <body>
   <div class="head">
-    <div><div class="brand">Maxmol Lubricant ERP</div><div style="font-size:11px">Lubricant Order &amp; Delivery</div></div>
+    <div><div class="brand">Auto pickup</div><div style="font-size:11px">Lubricant Order &amp; Delivery</div></div>
     <div class="right">
       <div class="ttl">PACKING SLIP</div>
       <div>Order No: <b>#${esc(order.order_number)}</b></div>
@@ -193,7 +193,7 @@ td {
   </table>
 
   <div class="sign"><div>Packed By</div><div>Checked By</div><div>Received By</div></div>
-  <div class="foot">This is a computer-generated packing slip from Maxmol Lubricant ERP.</div>
+  <div class="foot">This is a computer-generated packing slip from Auto pickup.</div>
 </body></html>`;
 
   const iframe = document.createElement('iframe');

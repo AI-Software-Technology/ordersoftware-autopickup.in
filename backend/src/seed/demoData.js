@@ -1,4 +1,4 @@
-// Demo dataset for Maxmol Lubricant Lubricant ERP ( roles, users, masters, parties and order scenarios )
+// Demo dataset for Auto pickup Lubricant ERP ( roles, users, masters, parties and order scenarios )
 
 const roles = [
   { name: 'Super Admin', slug: 'super_admin', description: 'Full system privileges and administrative control', is_system: 1 },

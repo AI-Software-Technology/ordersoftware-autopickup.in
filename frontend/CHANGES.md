@@ -1,4 +1,4 @@
-# Maxmol Lubricant frontend - routing, auth and login update
+# Auto pickup frontend - routing, auth and login update
 
 ## Setup after unzipping
     npm install          # new deps: react-router-dom, @fontsource-variable/schibsted-grotesk
