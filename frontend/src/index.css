@@ -1,0 +1,37 @@
+@import "tailwindcss";
+@import "@fontsource-variable/schibsted-grotesk";
+
+/* Login screen identity: deep petrol + oil amber. The rest of the app keeps its slate/amber look. */
+@theme {
+  --font-display: "Schibsted Grotesk Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-oil-950: #0d1c23;
+  --color-oil-900: #12262f;
+  --color-oil-800: #1a3440;
+  --color-oil-700: #284856;
+  --color-paper: #f2f4f5;
+}
+
+/* ---------- Print ----------
+   The app shell is viewport-locked (h-screen + overflow-hidden) for screen use.
+   For print we unlock it so the whole report flows over as many pages as needed. */
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  html, body, #root { height: auto !important; overflow: visible !important; background: #fff !important; }
+  .app-shell, .app-content, .app-main {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  table { width: 100% !important; font-size: 10px !important; }
+  thead { display: table-header-group; }   /* repeat header row on every page */
+  tr { break-inside: avoid; page-break-inside: avoid; }
+  .print-wrap { overflow: visible !important; }
+}
+
+/* Hide number-input spinner arrows everywhere (no up/down scroll buttons) */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
