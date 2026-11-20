@@ -22,7 +22,7 @@ const inputClass =
 const Brand: React.FC<{ tone: 'light' | 'dark' }> = ({ tone }) => (
   <div className="flex items-center gap-3">
     <span className="flex h-10 w-10 items-center justify-center rounded-xl text-oil-950 shadow-md">
-        <img src='https://i.ibb.co/YFZDpyCf/download-2.png' className='w-full' />
+        <img src='https://i.ibb.co/4ZJKzTGW/logo.jpg' className='w-full' />
     </span>
     <span className={`font-display text-xl font-semibold tracking-tight ${tone === 'dark' ? 'text-white' : 'text-oil-900'}`}>
       Auto pickup<span className="text-amber-500">Lubricant</span> ERP
