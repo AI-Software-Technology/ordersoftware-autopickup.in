@@ -97,9 +97,19 @@ exports.vendorLastRate = async (req, res) => {
 };
 
 exports.createProduct = async (req, res) => {
-  const { name, brand_id, category_id, unit, standard_rate, description, image_url, item_colour, status } = req.body;
-  const cleanUnit = (unit || '').toString().trim();
-  if (!name || !brand_id || !category_id || !cleanUnit) {
+  const { name, brand_id, category_id, unit, units, standard_rate, description, image_url, item_colour, status } = req.body;
+  const rawUnits = Array.isArray(units) && units.length > 0 ? units : [unit];
+  const cleanUnits = [];
+  const seenUnits = new Set();
+  for (const u of rawUnits) {
+    const clean = (u || '').toString().trim();
+    if (clean && !seenUnits.has(clean.toLowerCase())) {
+      seenUnits.add(clean.toLowerCase());
+      cleanUnits.push(clean);
+    }
+  }
+
+  if (!name || !brand_id || !category_id || cleanUnits.length === 0) {
     return res.status(400).json({ error: 'Name, Brand, Category, and Packing Unit are required' });
   }
 
@@ -113,31 +123,41 @@ exports.createProduct = async (req, res) => {
     /duplicate/i.test(e?.message || '') && /sku/i.test(e?.message || '') ||
     e?.code === 'ER_DUP_ENTRY' || e?.code === 11000 || e?.name === 'SequelizeUniqueConstraintError';
 
-  // base64 upload -> file on disk, DB keeps only the path
+  // base64 upload -> file on disk, DB keeps only the path (shared across all packing units)
   const imagePath = await resolveFileInput(image_url || '', 'products', req);
 
-  let product, sku;
-  for (let attempt = 0; attempt < 5; attempt++) {
-    sku = await nextSku();
-    try {
-      product = await Product.insert({
-        sku,
-        name, brand_id: Number(brand_id), category_id: Number(category_id), unit: cleanUnit,
-        min_order_qty: 1, standard_rate: Number(standard_rate) || 0,
-        description: description || '', image_url: imagePath || '',
-        item_colour: item_colour || 'Golden Yellow', status: status || 'active',
-      });
-      break;
-    } catch (e) {
-      if (!isDupSku(e) || attempt === 4) {
-        await deleteUploaded(imagePath);
-        return res.status(isDupSku(e) ? 409 : 500).json({ error: e.message });
+  const created = [];
+  for (const cleanUnit of cleanUnits) {
+    let product, sku;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      sku = await nextSku();
+      try {
+        product = await Product.insert({
+          sku,
+          name, brand_id: Number(brand_id), category_id: Number(category_id), unit: cleanUnit,
+          min_order_qty: 1, standard_rate: Number(standard_rate) || 0,
+          description: description || '', image_url: imagePath || '',
+          item_colour: item_colour || 'Golden Yellow', status: status || 'active',
+        });
+        break;
+      } catch (e) {
+        if (!isDupSku(e) || attempt === 4) {
+          if (created.length === 0) await deleteUploaded(imagePath);
+          return res.status(isDupSku(e) ? 409 : 500).json({ error: e.message });
+        }
       }
     }
+    created.push({ id: product.id, sku, unit: cleanUnit });
+    await logActivity(req.user.id, 'PRODUCT_CREATED', 'product', sku, `Added new product ${name} (${sku}) with packing unit ${cleanUnit}`);
   }
 
-  await logActivity(req.user.id, 'PRODUCT_CREATED', 'product', sku, `Added new product ${name} (${sku}) with packing unit ${cleanUnit}`);
-  res.json({ id: product.id, sku, message: 'Product created successfully' });
+  res.json({
+    id: created[0].id,
+    sku: created[0].sku,
+    products: created,
+    count: created.length,
+    message: created.length > 1 ? `${created.length} products created successfully` : 'Product created successfully',
+  });
 };
 
 exports.updateProduct = async (req, res) => {

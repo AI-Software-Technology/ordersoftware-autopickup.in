@@ -6,6 +6,54 @@ import { apiFetch } from '../lib/api.js';
 import { getToken } from '../lib/session.js';
 import { confirmAndDelete } from '../lib/deleteApi.js';
 
+const PACKING_UNIT_OPTIONS = [
+  '900 ML',
+  '1 Litre',
+  '1.5 Litre',
+  '3 Litre',
+  '3.5 Litre',
+  '5 Litre',
+  '7.5 Litre',
+  '10 Litre',
+  '20 Litre',
+  '26 Litre',
+  '50 KG',
+  '180 KG',
+  '210 Litre',
+  '1 Piece',
+  '12 Pieces',
+  '1 Box',
+  '1 Carton',
+  '24 Bottles',
+  'Drum',
+  'Bucket',
+  'Pouch',
+  'Custom Pack',
+];
+
+const QUICK_PACKING_UNITS = ['900 ML', '1 Litre', '5 Litre', '20 Litre', '180 KG', '210 Litre', '1 Box'];
+
+const parseUnitTokens = (raw: string): string[] =>
+  raw
+    .split(',')
+    .map((u) => u.trim())
+    .filter(Boolean);
+
+const mergeUniqueUnits = (existing: string[], additions: string[]): string[] => {
+  const next = [...existing];
+  const seen = new Set(existing.map((u) => u.toLowerCase()));
+  for (const unit of additions) {
+    const clean = unit.trim();
+    if (!clean) continue;
+    const key = clean.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      next.push(clean);
+    }
+  }
+  return next;
+};
+
 export const Products: React.FC = () => {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
@@ -42,6 +90,7 @@ export const Products: React.FC = () => {
     item_colour: 'Golden Yellow',
     status: 'active'
   });
+  const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
 
   const [actionLoading, setActionLoading] = useState(false);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
@@ -131,6 +180,7 @@ export const Products: React.FC = () => {
     setEditingId(null);
     setImageOption('upload');
     setImagePreview('');
+    setSelectedUnits([]);
     setForm({
       name: '',
       brand_id: brands[0]?.id ? brands[0].id.toString() : '',
@@ -154,6 +204,7 @@ export const Products: React.FC = () => {
     setModalMode('edit');
     setEditingId(p.id);
     setImagePreview(p.image_url || '');
+    setSelectedUnits([]);
     // Determine whether URL or base64
     if (p.image_url && p.image_url.startsWith('http')) {
       setImageOption('url');
@@ -174,26 +225,88 @@ export const Products: React.FC = () => {
     setShowModal(true);
   };
 
+  const addUnitsFromInput = (raw?: string) => {
+    const tokens = parseUnitTokens(raw ?? form.unit);
+    if (tokens.length === 0) return;
+    setSelectedUnits((prev) => mergeUniqueUnits(prev, tokens));
+    setForm((prev) => ({ ...prev, unit: '' }));
+  };
+
+  const toggleQuickUnit = (unit: string) => {
+    if (modalMode === 'edit') {
+      setForm((prev) => ({ ...prev, unit }));
+      return;
+    }
+    setSelectedUnits((prev) => {
+      const exists = prev.some((u) => u.toLowerCase() === unit.toLowerCase());
+      if (exists) {
+        return prev.filter((u) => u.toLowerCase() !== unit.toLowerCase());
+      }
+      return [...prev, unit];
+    });
+  };
+
+  const removeSelectedUnit = (unit: string) => {
+    setSelectedUnits((prev) => prev.filter((u) => u.toLowerCase() !== unit.toLowerCase()));
+  };
+
+  const pendingUnits = modalMode === 'add'
+    ? mergeUniqueUnits(selectedUnits, parseUnitTokens(form.unit))
+    : [];
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (modalMode === 'add' && pendingUnits.length === 0) {
+      alert('Please enter or select at least one Packing Unit.');
+      return;
+    }
+
     setActionLoading(true);
     try {
       const token = getToken();
-      const url = modalMode === 'add' ? '/api/products' : `/api/products/${editingId}`;
-      const method = modalMode === 'add' ? 'POST' : 'PUT';
-
-      const res = await apiFetch(url, {
-        method,
-        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify(form)
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setShowModal(false);
-        fetchProducts();
-      } else {
-        alert(data.error || 'Failed to save product');
+      if (modalMode === 'edit') {
+        const res = await apiFetch(`/api/products/${editingId}`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(form)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setShowModal(false);
+          fetchProducts();
+        } else {
+          alert(data.error || 'Failed to save product');
+        }
+        return;
       }
+
+      // Create one product record per packing unit sequentially so SKUs increment cleanly
+      // and it stays compatible with both current and updated backend APIs.
+      let createdCount = 0;
+      for (let i = 0; i < pendingUnits.length; i++) {
+        const unit = pendingUnits[i];
+        const res = await apiFetch('/api/products', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...form, unit })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (createdCount > 0) fetchProducts();
+          setSelectedUnits(pendingUnits.slice(i));
+          setForm((prev) => ({ ...prev, unit: '' }));
+          alert(
+            createdCount > 0
+              ? `Saved ${createdCount} product(s), but failed on "${unit}": ${data.error || 'Failed to save product'}`
+              : (data.error || 'Failed to save product')
+          );
+          return;
+        }
+        createdCount++;
+      }
+
+      setShowModal(false);
+      fetchProducts();
     } finally {
       setActionLoading(false);
     }
@@ -690,59 +803,125 @@ export const Products: React.FC = () => {
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block font-semibold text-xs text-slate-700">Packing Unit *</label>
-                    <span className="text-[10px] text-slate-400">Type any unit or pick below</span>
+                    <label className="block font-semibold text-xs text-slate-700">
+                      {modalMode === 'add' ? 'Packing Units *' : 'Packing Unit *'}
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {modalMode === 'add'
+                        ? 'Add multiple units (Enter, + Add, or pick below)'
+                        : 'Type any unit or pick below'}
+                    </span>
                   </div>
-                  <input
-                    type="text"
-                    required
-                    value={form.unit}
-                    onChange={(e) => setForm({ ...form, unit: e.target.value })}
-                    placeholder="e.g. 900 ML, 5 Litre, 20 Litre, 180 KG, 1 Box"
-                    list="packing-unit-list"
-                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      required={modalMode === 'edit' || selectedUnits.length === 0}
+                      value={form.unit}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const inputType = (e.nativeEvent as InputEvent)?.inputType;
+                        if (
+                          modalMode === 'add' &&
+                          (inputType === 'insertReplacementText' || !(e.nativeEvent instanceof InputEvent)) &&
+                          PACKING_UNIT_OPTIONS.some((o) => o.toLowerCase() === val.trim().toLowerCase())
+                        ) {
+                          addUnitsFromInput(val);
+                          return;
+                        }
+                        setForm((prev) => ({ ...prev, unit: val }));
+                      }}
+                      onKeyDown={(e) => {
+                        if (modalMode === 'add' && (e.key === 'Enter' || e.key === ',')) {
+                          e.preventDefault();
+                          addUnitsFromInput();
+                        }
+                      }}
+                      placeholder={
+                        modalMode === 'add'
+                          ? 'e.g. 900 ML, 1 Litre, 5 Litre (press Enter or + Add)'
+                          : 'e.g. 900 ML, 5 Litre, 20 Litre, 180 KG, 1 Box'
+                      }
+                      list="packing-unit-list"
+                      className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    {modalMode === 'add' && (
+                      <button
+                        type="button"
+                        onClick={() => addUnitsFromInput()}
+                        disabled={!form.unit.trim()}
+                        className="px-3 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-200 disabled:text-slate-400 text-slate-950 font-bold rounded-lg text-xs flex items-center gap-1 shrink-0 transition"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add</span>
+                      </button>
+                    )}
+                  </div>
+
                   <datalist id="packing-unit-list">
-                    <option value="900 ML" />
-                    <option value="1 Litre" />
-                    <option value="1.5 Litre" />
-                    <option value="3 Litre" />
-                    <option value="3.5 Litre" />
-                    <option value="5 Litre" />
-                    <option value="7.5 Litre" />
-                    <option value="10 Litre" />
-                    <option value="20 Litre" />
-                    <option value="26 Litre" />
-                    <option value="50 KG" />
-                    <option value="180 KG" />
-                    <option value="210 Litre" />
-                    <option value="1 Piece" />
-                    <option value="12 Pieces" />
-                    <option value="1 Box" />
-                    <option value="1 Carton" />
-                    <option value="24 Bottles" />
-                    <option value="Drum" />
-                    <option value="Bucket" />
-                    <option value="Pouch" />
-                    <option value="Custom Pack" />
+                    {PACKING_UNIT_OPTIONS.map((u) => (
+                      <option key={u} value={u} />
+                    ))}
                   </datalist>
+
+                  {/* Selected Packing Units (Add Mode) */}
+                  {modalMode === 'add' && selectedUnits.length > 0 && (
+                    <div className="mt-2 p-2.5 bg-amber-50/70 border border-amber-200 rounded-lg space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-semibold text-amber-900">
+                          Selected Packing Units ({selectedUnits.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedUnits([])}
+                          className="text-[10px] text-rose-600 hover:underline font-semibold"
+                        >
+                          Clear all
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedUnits.map((u) => (
+                          <span
+                            key={u}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white border border-amber-300 text-amber-950 font-semibold text-[11px] shadow-2xs"
+                          >
+                            <span>{u}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeSelectedUnit(u)}
+                              className="text-amber-700 hover:text-rose-600 transition"
+                              title={`Remove ${u}`}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Quick-Select Suggestions */}
                   <div className="flex flex-wrap gap-1 mt-1.5">
-                    {['900 ML', '1 Litre', '5 Litre', '20 Litre', '180 KG', '210 Litre', '1 Box'].map(u => (
-                      <button
-                        type="button"
-                        key={u}
-                        onClick={() => setForm({ ...form, unit: u })}
-                        className={`text-[10px] px-1.5 py-0.5 rounded border transition ${
-                          form.unit === u
-                            ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
-                            : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
-                        }`}
-                      >
-                        {u}
-                      </button>
-                    ))}
+                    {QUICK_PACKING_UNITS.map((u) => {
+                      const isSelected =
+                        modalMode === 'add'
+                          ? selectedUnits.some((s) => s.toLowerCase() === u.toLowerCase())
+                          : form.unit === u;
+                      return (
+                        <button
+                          type="button"
+                          key={u}
+                          onClick={() => toggleQuickUnit(u)}
+                          className={`text-[10px] px-1.5 py-0.5 rounded border transition ${
+                            isSelected
+                              ? 'bg-amber-100 text-amber-900 border-amber-300 font-bold'
+                              : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                          }`}
+                        >
+                          {modalMode === 'add' ? `${isSelected ? '✓ ' : '+ '}${u}` : u}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -795,9 +974,15 @@ export const Products: React.FC = () => {
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  className="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 text-slate-950 font-bold rounded-lg shadow-xs"
+                  className="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 text-slate-950 font-bold rounded-lg shadow-xs disabled:opacity-60"
                 >
-                  {modalMode === 'add' ? 'Save New Product' : 'Update Product'}
+                  {actionLoading
+                    ? 'Saving...'
+                    : modalMode === 'add'
+                      ? pendingUnits.length > 1
+                        ? `Save ${pendingUnits.length} Products`
+                        : 'Save New Product'
+                      : 'Update Product'}
                 </button>
               </div>
             </form>
