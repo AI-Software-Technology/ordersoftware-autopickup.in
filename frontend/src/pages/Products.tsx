@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Package, Search, Plus, Filter, RefreshCw, X, Tag, Upload, Link as LinkIcon, Edit, Eye, Trash2, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Package, Search, Plus, Filter, RefreshCw, X, Tag, Upload, Link as LinkIcon, Edit, Eye, Trash2, CheckCircle2, ChevronLeft, ChevronRight, ChevronDown, Check } from 'lucide-react';
 import { useAuth } from '../store/authStore.js';
 import { Product } from '../types.js';
 import { apiFetch } from '../lib/api.js';
@@ -91,6 +91,19 @@ export const Products: React.FC = () => {
     status: 'active'
   });
   const [selectedUnits, setSelectedUnits] = useState<string[]>([]);
+  const [showUnitDropdown, setShowUnitDropdown] = useState(false);
+  const unitDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showUnitDropdown) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (unitDropdownRef.current && !unitDropdownRef.current.contains(event.target as Node)) {
+        setShowUnitDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showUnitDropdown]);
 
   const [actionLoading, setActionLoading] = useState(false);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
@@ -181,6 +194,7 @@ export const Products: React.FC = () => {
     setImageOption('upload');
     setImagePreview('');
     setSelectedUnits([]);
+    setShowUnitDropdown(false);
     setForm({
       name: '',
       brand_id: brands[0]?.id ? brands[0].id.toString() : '',
@@ -205,6 +219,7 @@ export const Products: React.FC = () => {
     setEditingId(p.id);
     setImagePreview(p.image_url || '');
     setSelectedUnits([]);
+    setShowUnitDropdown(false);
     // Determine whether URL or base64
     if (p.image_url && p.image_url.startsWith('http')) {
       setImageOption('url');
@@ -801,7 +816,7 @@ export const Products: React.FC = () => {
 
               <div className="grid grid-cols-1 gap-3">
 
-                <div>
+                <div ref={unitDropdownRef} className="relative">
                   <div className="flex items-center justify-between mb-1">
                     <label className="block font-semibold text-xs text-slate-700">
                       {modalMode === 'add' ? 'Packing Units *' : 'Packing Unit *'}
@@ -814,37 +829,147 @@ export const Products: React.FC = () => {
                   </div>
 
                   <div className="flex gap-2">
-                    <input
-                      type="text"
-                      required={modalMode === 'edit' || selectedUnits.length === 0}
-                      value={form.unit}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        const inputType = (e.nativeEvent as InputEvent)?.inputType;
-                        if (
-                          modalMode === 'add' &&
-                          (inputType === 'insertReplacementText' || !(e.nativeEvent instanceof InputEvent)) &&
-                          PACKING_UNIT_OPTIONS.some((o) => o.toLowerCase() === val.trim().toLowerCase())
-                        ) {
-                          addUnitsFromInput(val);
-                          return;
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        required={modalMode === 'edit' || selectedUnits.length === 0}
+                        value={form.unit}
+                        onFocus={() => setShowUnitDropdown(true)}
+                        onChange={(e) => {
+                          setForm((prev) => ({ ...prev, unit: e.target.value }));
+                          if (!showUnitDropdown) setShowUnitDropdown(true);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            setShowUnitDropdown(false);
+                            return;
+                          }
+                          if (modalMode === 'add' && (e.key === 'Enter' || e.key === ',')) {
+                            e.preventDefault();
+                            addUnitsFromInput();
+                          }
+                        }}
+                        placeholder={
+                          modalMode === 'add'
+                            ? 'e.g. 900 ML, 1 Litre, 5 Litre (press Enter or + Add)'
+                            : 'e.g. 900 ML, 5 Litre, 20 Litre, 180 KG, 1 Box'
                         }
-                        setForm((prev) => ({ ...prev, unit: val }));
-                      }}
-                      onKeyDown={(e) => {
-                        if (modalMode === 'add' && (e.key === 'Enter' || e.key === ',')) {
-                          e.preventDefault();
-                          addUnitsFromInput();
-                        }
-                      }}
-                      placeholder={
-                        modalMode === 'add'
-                          ? 'e.g. 900 ML, 1 Litre, 5 Litre (press Enter or + Add)'
-                          : 'e.g. 900 ML, 5 Litre, 20 Litre, 180 KG, 1 Box'
-                      }
-                      list="packing-unit-list"
-                      className="flex-1 p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    />
+                        autoComplete="off"
+                        className="w-full p-2 pr-8 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowUnitDropdown((prev) => !prev)}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-700 transition"
+                        title="Show packing unit suggestions"
+                      >
+                        <ChevronDown className={`w-4 h-4 transition-transform duration-150 ${showUnitDropdown ? 'rotate-180 text-amber-600' : ''}`} />
+                      </button>
+
+                      {/* Custom Styled Packing Unit Suggestion Dropdown */}
+                      {showUnitDropdown && (() => {
+                        const query = form.unit.trim().toLowerCase();
+                        const filteredOptions = PACKING_UNIT_OPTIONS.filter((u) =>
+                          !query || u.toLowerCase().includes(query)
+                        );
+                        const exactMatch = PACKING_UNIT_OPTIONS.some((u) => u.toLowerCase() === query);
+
+                        return (
+                          <div className="absolute left-0 right-0 top-full mt-1.5 z-30 bg-white rounded-xl border border-slate-200 shadow-xl ring-1 ring-black/5 overflow-hidden">
+                            <div className="px-3 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <Tag className="w-3.5 h-3.5 text-amber-500" />
+                                <span className="text-[11px] font-bold text-slate-700">
+                                  Packing Unit Suggestions
+                                </span>
+                                {modalMode === 'add' && selectedUnits.length > 0 && (
+                                  <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-bold">
+                                    {selectedUnits.length} selected
+                                  </span>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setShowUnitDropdown(false)}
+                                className="px-2 py-0.5 rounded-md bg-amber-500 hover:bg-amber-600 text-slate-950 text-[10px] font-bold transition"
+                              >
+                                Done
+                              </button>
+                            </div>
+
+                            <div className="p-2.5 max-h-52 overflow-y-auto space-y-2">
+                              {filteredOptions.length > 0 ? (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                                  {filteredOptions.map((u) => {
+                                    const isSelected =
+                                      modalMode === 'add'
+                                        ? selectedUnits.some((s) => s.toLowerCase() === u.toLowerCase())
+                                        : form.unit.trim().toLowerCase() === u.toLowerCase();
+
+                                    return (
+                                      <button
+                                        type="button"
+                                        key={u}
+                                        onClick={() => {
+                                          if (modalMode === 'add') {
+                                            toggleQuickUnit(u);
+                                          } else {
+                                            setForm((prev) => ({ ...prev, unit: u }));
+                                            setShowUnitDropdown(false);
+                                          }
+                                        }}
+                                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-left text-[11px] transition ${
+                                          isSelected
+                                            ? 'bg-amber-50 border-amber-400 text-amber-950 font-semibold shadow-2xs'
+                                            : 'bg-slate-50/80 border-slate-200 text-slate-700 hover:bg-amber-50/50 hover:border-amber-300'
+                                        }`}
+                                      >
+                                        <span
+                                          className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 border transition ${
+                                            isSelected
+                                              ? 'bg-amber-500 border-amber-500 text-slate-950'
+                                              : 'bg-white border-slate-300'
+                                          }`}
+                                        >
+                                          {isSelected && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                                        </span>
+                                        <span className="truncate">{u}</span>
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="text-[11px] text-slate-400 text-center py-2">
+                                  No preset matches "{form.unit.trim()}"
+                                </p>
+                              )}
+
+                              {form.unit.trim() && !exactMatch && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (modalMode === 'add') {
+                                      addUnitsFromInput();
+                                    } else {
+                                      setShowUnitDropdown(false);
+                                    }
+                                  }}
+                                  className="w-full px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 border border-dashed border-amber-300 text-amber-900 font-semibold text-[11px] flex items-center justify-center gap-1.5 transition"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                  <span>
+                                    {modalMode === 'add'
+                                      ? `Add custom unit "${form.unit.trim()}"`
+                                      : `Use "${form.unit.trim()}"`}
+                                  </span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+
                     {modalMode === 'add' && (
                       <button
                         type="button"
@@ -857,12 +982,6 @@ export const Products: React.FC = () => {
                       </button>
                     )}
                   </div>
-
-                  <datalist id="packing-unit-list">
-                    {PACKING_UNIT_OPTIONS.map((u) => (
-                      <option key={u} value={u} />
-                    ))}
-                  </datalist>
 
                   {/* Selected Packing Units (Add Mode) */}
                   {modalMode === 'add' && selectedUnits.length > 0 && (
